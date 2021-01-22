@@ -5,8 +5,8 @@ const mysql = require("mysql");
 const figlet = require("figlet");
 const Separator = require("choices-separator");
 const clear = require("clear");
-const { exit } = require("process");
-const { endianness } = require("os");
+const queryFunctions = require("./Assets/Javascript/queryfunctions");
+const util = require("util");
 
 // Creating a connection to the SQL Server
 // =========================================================
@@ -32,7 +32,7 @@ connection.connect(function (err) {
   // Start the program.
   init();
 });
-
+connection.query = util.promisify(connection.query);
 // Functions
 // =========================================================
 
@@ -41,7 +41,6 @@ function init() {
 }
 
 function userPrompt() {
-  clear();
   inquirer
     .prompt([
       {
@@ -65,41 +64,36 @@ function userPrompt() {
       },
     ])
     .then((choice) => {
-      switch (choice.choices) {
+      console.log(choice.userChoice);
+      switch (choice.userChoice) {
         case "View All Employees":
+          console.log("hi");
           viewEmployees();
           break;
         case "Add Employee":
-          // code block
+          addEmployee();
           break;
         case "Remove Employee":
-          // code block
+          removeEmployee();
           break;
         case "Update Employee Role":
-          // code block
           break;
         case "Update Employee Manager":
-          // code block
           break;
         case "View All Roles":
-          // code block
           break;
         case "Add Role":
-          // code block
+          addRole();
           break;
         case "Remove Role":
-          // code block
           break;
         case "View All Departments":
-          // code block
           break;
         case "Add Department":
-          // code block
           break;
         case "Remove Department":
-          // code block
           break;
-        case "Exit":
+        default:
           connectionEnd();
           break;
       }
@@ -143,14 +137,80 @@ function ascii() {
   );
 }
 
+// Ends connection.
 function connectionEnd() {
   connection.end();
 }
 
+// View Employee's.
 function viewEmployees() {
   const query = `SELECT first_name, last_name from employees`;
-  connection.query(query, function (err, res) {
+  connection.query(query, function (err, data) {
     if (err) throw err;
+    clear();
+    console.table(data);
     userPrompt();
   });
+}
+
+function addEmployee() {
+  const idOfRoleQuery = `SELECT id FROM roles WHERE title=?`;
+  const employeeQuery = `SELECT first_name, last_name FROM employees;`;
+  const assignManagerQuery = `SELECT id FROM employees WHERE first_name=? AND last_name =?;`;
+  inquirer.prompt([
+    {
+      type: "input",
+      name: "newEmployeeFirstName",
+      message: "What is your new hires first name?",
+      default: "John",
+    },
+    {
+      type: "input",
+      name: "newEmployeeLastName",
+      message: "What is your new hires last name?",
+      default: "Doe",
+    },
+    {
+      type: "list",
+      name: "chooseRole",
+      message: "Pick their role.",
+      choices: roleQuery,
+    },
+  ]);
+}
+
+// Remove Employee.
+function removeEmployee() {}
+
+async function roleQuery() {
+  const roleQuery = `SELECT title FROM roles;`;
+  const query = await connection.query(roleQuery);
+  const newArray = query.map((data) => {
+    return data.title;
+  });
+  return newArray;
+}
+
+function addRole() {
+  inquirer
+    .prompt([
+      {
+        type: "input",
+        message: "What role do you want to add?",
+        name: "title",
+      },
+      {
+        type: "input",
+        message: "What salary will this role receive?",
+        name: "salary",
+      },
+      {
+        type: "list",
+        message: "what department does this role go in?",
+        choices: ["hi", "hi2"], // TODO
+      },
+    ])
+    .then((response) => {
+      console.log(response);
+    });
 }
