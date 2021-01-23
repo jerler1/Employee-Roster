@@ -46,15 +46,11 @@ function userPrompt() {
         choices: [
           "View All Employees",
           "Add Employee",
-          "Remove Employee",
           "Update Employee Role",
-          "Update Employee Manager",
           "View All Roles",
           "Add Role",
-          "Remove Role",
           "View All Departments",
           "Add Department",
-          "Remove Department",
           "Exit",
         ],
       },
@@ -68,25 +64,19 @@ function userPrompt() {
         case "Add Employee":
           addEmployee();
           break;
-        case "Remove Employee":
-          removeEmployee();
-          break;
         case "Update Employee Role":
-          break;
-        case "Update Employee Manager":
+          updateEmployee();
           break;
         case "View All Roles":
+          viewRoles();
           break;
         case "Add Role":
           addRole();
           break;
-        case "Remove Role":
-          break;
         case "View All Departments":
+          viewDepartments();
           break;
         case "Add Department":
-          break;
-        case "Remove Department":
           break;
         default:
           connectionEnd();
@@ -204,9 +194,6 @@ function addEmployee() {
     });
 }
 
-// Remove Employee.
-function removeEmployee() {}
-
 async function roleQuery() {
   const roleQuery = `SELECT title FROM roles;`;
   const query = await connection.query(roleQuery);
@@ -267,15 +254,42 @@ function addRole() {
       },
     ])
     .then(async (response) => {
-      console.log(response);
       const departmentID = await idDepartmentQuery(response.chooseDepartment);
       const query = `INSERT INTO roles(title, salary, department_id)
       VALUES(?,?,?);`;
       const values = [response.title, response.salary, departmentID];
       connection.query(query, values, function (err, data) {
         if (err) throw err;
-        console.log(data);
       });
+      userPrompt();
+    });
+}
+
+// Update Employee
+function updateEmployee() {
+  inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "What employee do you want to update?",
+        name: "chooseEmployee",
+        choices: employeeQuery,
+      },
+      {
+        type: "list",
+        message: "What role do you want to promote them to?",
+        name: "chooseRole",
+        choices: roleQuery,
+      },
+    ])
+    .then(async function (response) {
+      const split = response.chooseEmployee.split(" ");
+      const queryRole = `SELECT id FROM roles WHERE title=?;`;
+      const newRole = await connection.query(queryRole, [response.chooseRole]);
+      const values = [newRole[0].id, split[0], split[1]];
+      const newQuery = `UPDATE employees SET role_id=? WHERE first_name=? AND last_name=?;`;
+      connection.query(newQuery, values);
+      userPrompt();
     });
 }
 
@@ -284,4 +298,21 @@ async function idDepartmentQuery(department) {
   const id = await connection.query(query, [department]);
   console.log(id[0].id);
   return id[0].id;
+}
+
+function viewRoles() {
+  const query = `SELECT title FROM roles;`;
+  connection.query(query, (err, data) => {
+    clear();
+    console.table(data);
+    userPrompt();
+  });
+}
+function viewDepartments() {
+  const query = `SELECT department FROM departments;`;
+  connection.query(query, (err, data) => {
+    clear();
+    console.table(data);
+    userPrompt();
+  });
 }
