@@ -19,8 +19,6 @@ To intall this application using prebuilt html and css elements involved this:
 1. Install the npm dependencies.
 1. Type node index.js in your node window.
 
-https://drive.google.com/file/d/13U3kQguU-30ykuTUrLnWFEYe0VKW6Eel/view
-
 #### **Trials**
 
 ---
@@ -34,6 +32,8 @@ Learning how to join tables while trying to keep track of various id's was a rew
 The usage of this app is simple. There is a starting menu. Choose whichever option you want and follow the prompts. If you want to see the roles, departments, or employee's click the approriate view option. If you want to add do the same for the add options.
 ![gif of app](./Assets/gif.gif)
 Link to the deployed website can be found [here](https://github.com/jerler1/Employee-Roster).
+
+Link to the video is [here](https://drive.google.com/file/d/13U3kQguU-30ykuTUrLnWFEYe0VKW6Eel/view)
 
 #### **Credits**
 
