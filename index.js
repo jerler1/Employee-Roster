@@ -3,7 +3,6 @@
 const inquirer = require("inquirer");
 const mysql = require("mysql");
 const figlet = require("figlet");
-const Separator = require("choices-separator");
 const clear = require("clear");
 const queryFunctions = require("./Assets/Javascript/queryfunctions");
 const util = require("util");
@@ -30,16 +29,13 @@ connection.connect(function (err) {
   if (err) throw err;
 
   // Start the program.
-  init();
+  userPrompt();
 });
 connection.query = util.promisify(connection.query);
 // Functions
 // =========================================================
 
-function init() {
-  userPrompt();
-}
-
+// Main function - Allows the user to find the options they want to use.
 function userPrompt() {
   inquirer
     .prompt([
@@ -67,7 +63,6 @@ function userPrompt() {
       console.log(choice.userChoice);
       switch (choice.userChoice) {
         case "View All Employees":
-          console.log("hi");
           viewEmployees();
           break;
         case "Add Employee":
@@ -144,7 +139,9 @@ function connectionEnd() {
 
 // View Employee's.
 function viewEmployees() {
-  const query = `SELECT first_name, last_name from employees`;
+  const query = `SELECT first_name, last_name, title, salary, department FROM employees 
+  INNER JOIN roles ON employees.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id;
+  `;
   connection.query(query, function (err, data) {
     if (err) throw err;
     clear();
@@ -154,29 +151,57 @@ function viewEmployees() {
 }
 
 function addEmployee() {
-  const idOfRoleQuery = `SELECT id FROM roles WHERE title=?`;
-  const employeeQuery = `SELECT first_name, last_name FROM employees;`;
-  const assignManagerQuery = `SELECT id FROM employees WHERE first_name=? AND last_name =?;`;
-  inquirer.prompt([
-    {
-      type: "input",
-      name: "newEmployeeFirstName",
-      message: "What is your new hires first name?",
-      default: "John",
-    },
-    {
-      type: "input",
-      name: "newEmployeeLastName",
-      message: "What is your new hires last name?",
-      default: "Doe",
-    },
-    {
-      type: "list",
-      name: "chooseRole",
-      message: "Pick their role.",
-      choices: roleQuery,
-    },
-  ]);
+  inquirer
+    .prompt([
+      {
+        type: "input",
+        name: "newEmployeeFirstName",
+        message: "What is your new hires first name?",
+        default: "John",
+      },
+      {
+        type: "input",
+        name: "newEmployeeLastName",
+        message: "What is your new hires last name?",
+        default: "Doe",
+      },
+      {
+        type: "list",
+        name: "chooseRole",
+        message: "Pick their role.",
+        choices: roleQuery,
+      },
+      {
+        type: "list",
+        name: "chooseManager",
+        message: "Pick their manager",
+        choices: employeeQuery,
+      },
+    ])
+    .then(async (answers) => {
+      console.log(answers);
+      const roleID = await acquireRoleID(answers.chooseRole);
+      let managerID = "";
+      if (answers.chooseManager) {
+        managerID = await acquireManagerID(answers.chooseManager);
+      } else {
+        managerID = NULL;
+      }
+      const values = [
+        answers.newEmployeeFirstName,
+        answers.newEmployeeLastName,
+        roleID,
+        managerID,
+      ];
+      console.log(values);
+      const query = `INSERT INTO employees(first_name, last_name, role_id, manager_id)
+      VALUES(?,?,?,?);`;
+      connection.query(query, values, (err, data) => {
+        if (err) throw err;
+        console.log("Added Employee!");
+      });
+      userPrompt();
+    });
 }
 
 // Remove Employee.
@@ -187,6 +212,36 @@ async function roleQuery() {
   const query = await connection.query(roleQuery);
   const newArray = query.map((data) => {
     return data.title;
+  });
+  return newArray;
+}
+async function employeeQuery() {
+  const employeeQuery = `SELECT first_name, last_name FROM employees;`;
+  const query = await connection.query(employeeQuery);
+  const newArray = query.map((data) => {
+    return data.first_name + " " + data.last_name;
+  });
+  return newArray;
+}
+async function acquireRoleID(role) {
+  const idOfRoleQuery = `SELECT id FROM roles WHERE title=?`;
+  const query = await connection.query(idOfRoleQuery, [role]);
+  return query[0].id;
+}
+async function acquireManagerID(manager) {
+  const split = manager.split(" ");
+  const assignManagerQuery = `SELECT id FROM employees WHERE first_name=? AND last_name =?;`;
+  const query = await connection.query(assignManagerQuery, [
+    split[0],
+    split[1],
+  ]);
+  return query[0].id;
+}
+async function departmentQuery() {
+  const departmentQuery = `SELECT department FROM departments;`;
+  const query = await connection.query(departmentQuery);
+  const newArray = query.map((data) => {
+    return data.department;
   });
   return newArray;
 }
@@ -206,11 +261,27 @@ function addRole() {
       },
       {
         type: "list",
+        name: "chooseDepartment",
         message: "what department does this role go in?",
-        choices: ["hi", "hi2"], // TODO
+        choices: departmentQuery,
       },
     ])
-    .then((response) => {
+    .then(async (response) => {
       console.log(response);
+      const departmentID = await idDepartmentQuery(response.chooseDepartment);
+      const query = `INSERT INTO roles(title, salary, department_id)
+      VALUES(?,?,?);`;
+      const values = [response.title, response.salary, departmentID];
+      connection.query(query, values, function (err, data) {
+        if (err) throw err;
+        console.log(data);
+      });
     });
+}
+
+async function idDepartmentQuery(department) {
+  const query = `SELECT id FROM departments WHERE department=?;`;
+  const id = await connection.query(query, [department]);
+  console.log(id[0].id);
+  return id[0].id;
 }
