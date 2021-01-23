@@ -77,6 +77,7 @@ function userPrompt() {
           viewDepartments();
           break;
         case "Add Department":
+          addDepartment();
           break;
         default:
           connectionEnd();
@@ -315,4 +316,24 @@ function viewDepartments() {
     console.table(data);
     userPrompt();
   });
+}
+
+function addDepartment() {
+  inquirer
+    .prompt([
+      {
+        type: "input",
+        name: "newDepartment",
+        message: "What is your new department called?",
+      },
+    ])
+    .then((response) => {
+      const value = response.newDepartment;
+      const query = `INSERT INTO departments(department)
+    VALUE(?);`;
+      connection.query(query, value, function (err, data) {
+        if (err) throw err;
+        userPrompt();
+      });
+    });
 }
